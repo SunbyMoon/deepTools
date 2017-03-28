@@ -441,7 +441,18 @@ class Correlation:
         if self.rowCenter:
             _ = self.matrix.mean(axis=1)
             self.matrix -= _[:, None]
-        mlab_pca = matplotlib.mlab.PCA(self.matrix)
+
+        # Get the samples rather than the bins
+        m = self.matrix
+        mu = m.mean(axis=0)
+        sigma = m.std(axis=0)
+        m = (m - mu) / sigma
+        m = m.T
+        U, s, V = np.linalg.svd(m, full_matrices=False)
+        Wt = np.dot(m, V.T)
+        s = s**2
+        vars = s / len(s)
+        fracs = vars / vars.sum()
         n = len(self.labels)
         markers = itertools.cycle(matplotlib.markers.MarkerStyle.filled_markers)
         colors = itertools.cycle(plt.cm.gist_rainbow(np.linspace(0, 1, n)))
@@ -449,7 +460,7 @@ class Correlation:
         ax1.axhline(y=0, color="black", linestyle="dotted", zorder=1)
         ax1.axvline(x=0, color="black", linestyle="dotted", zorder=2)
         for i in range(n):
-            ax1.scatter(mlab_pca.Wt[0, i], mlab_pca.Wt[1, i],
+            ax1.scatter(Wt[i, 0], Wt[i, 1],
                         marker=next(markers), color=next(colors), s=150, label=self.labels[i], zorder=i + 3)
         if plot_title == '':
             ax1.set_title('PCA')
@@ -462,11 +473,11 @@ class Correlation:
                          prop={'size': 12}, markerscale=0.9)
 
         # Scree plot
-        eigenvalues = mlab_pca.s
+        eigenvalues = s
 
         cumulative = []
         c = 0
-        for x in mlab_pca.fracs:
+        for x in fracs:
             c += x
             cumulative.append(c)
 
